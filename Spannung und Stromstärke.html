@@ -1,0 +1,689 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Spannung und Stromstärke</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  /* Layout: ein durchlaufendes "Messheft" — Stationen als Karten, oben eine Sprungleiste wie eine Skalenanzeige */
+  :root{
+    --paper:#EFF2F4; --paper-2:#E4E9ED; --card-bg:#FFFFFF;
+    --ink:#15233A; --ink-soft:#4B5A70; --line:#CBD4DC;
+    --accent:#B5750A; --accent-contrast:#FFF8EC;
+    --teal:#0B6E72; --teal-contrast:#EAFBFB;
+    --good:#1E7A34; --good-bg:#E4F3E7;
+    --bad:#B3261E; --bad-bg:#FBE6E4;
+    --font-display:'Newsreader', Georgia, 'Times New Roman', serif;
+    --font-body:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --font-mono:'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#111722; --paper-2:#19212D; --card-bg:#162032;
+      --ink:#E8ECF2; --ink-soft:#AAB7C8; --line:#2A3747;
+      --accent:#F2A33D; --accent-contrast:#2B1B02;
+      --teal:#53D6D6; --teal-contrast:#07282A;
+      --good:#6FDB8B; --good-bg:#153522;
+      --bad:#FF867B; --bad-bg:#3A1714;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#111722; --paper-2:#19212D; --card-bg:#162032;
+    --ink:#E8ECF2; --ink-soft:#AAB7C8; --line:#2A3747;
+    --accent:#F2A33D; --accent-contrast:#2B1B02;
+    --teal:#53D6D6; --teal-contrast:#07282A;
+    --good:#6FDB8B; --good-bg:#153522;
+    --bad:#FF867B; --bad-bg:#3A1714;
+    color-scheme: dark;
+  }
+
+  *{ box-sizing:border-box; }
+  body{ background:var(--paper); color:var(--ink); font-family:var(--font-body); }
+  .page{ max-width:860px; margin:0 auto; padding-inline:20px; padding-block:28px 72px; }
+
+  .hero{ padding-block-end:18px; border-bottom:1px solid var(--line); margin-block-end:8px; }
+  .eyebrow{ font-family:var(--font-mono); font-size:.74rem; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft); }
+  h1{ font-family:var(--font-display); font-weight:700; font-size:clamp(1.8rem,4.2vw,2.6rem); line-height:1.1; margin:.35em 0 .3em; text-wrap:balance; }
+  .lede{ font-size:1.02rem; color:var(--ink-soft); max-width:62ch; line-height:1.55; margin:0 0 14px; }
+  .meta-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .pill{ font-family:var(--font-mono); font-size:.76rem; border:1px solid var(--line); border-radius:999px; padding:5px 12px; color:var(--ink-soft); }
+
+  .stepper{ position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--paper); display:flex; gap:8px; overflow-x:auto; padding-block:12px; margin-inline:-20px; padding-inline:20px; border-bottom:1px solid var(--line); scrollbar-width:thin; }
+  .stepper a{ flex:0 0 auto; font-family:var(--font-mono); font-size:.76rem; text-decoration:none; color:var(--ink-soft); border:1px solid var(--line); border-radius:999px; padding:6px 13px; white-space:nowrap; transition:color .15s, border-color .15s, background .15s; }
+  .stepper a.active{ color:var(--accent); border-color:var(--accent); background:var(--paper-2); }
+
+  .block{ background:var(--card-bg); border:1px solid var(--line); border-radius:16px; padding:22px clamp(16px,4vw,28px); margin-block-start:26px; scroll-margin-top:60px; }
+  .block.highlight{ border-color:var(--teal); box-shadow:0 0 0 1px var(--teal) inset; }
+
+  .block-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-block-end:10px; }
+  .tag{ font-family:var(--font-mono); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); border:1px solid currentColor; border-radius:999px; padding:4px 11px; }
+  .tag-new{ color:var(--teal); }
+  .time-btn{ font-family:var(--font-mono); font-size:.76rem; color:var(--ink-soft); background:none; border:1px dashed var(--line); border-radius:999px; padding:5px 12px; cursor:pointer; min-width:7.5em; }
+  .time-btn:hover{ color:var(--ink); border-color:var(--ink-soft); }
+  .time-btn.running{ color:var(--accent); border-color:var(--accent); border-style:solid; }
+  .time-btn.done{ color:var(--bad); border-color:var(--bad); border-style:solid; }
+
+  h2{ font-family:var(--font-display); font-weight:600; font-size:1.5rem; margin:.2em 0 .5em; text-wrap:balance; }
+  h3{ font-family:var(--font-display); font-weight:600; font-size:1.15rem; margin:1.1em 0 .4em; }
+  p{ line-height:1.6; margin:0 0 .9em; max-width:68ch; }
+  .small{ font-size:.86rem; color:var(--ink-soft); }
+  strong{ color:var(--ink); }
+
+  .scale-rule{ height:10px; background-image:repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 10px); margin-block:18px; opacity:.8; }
+
+  /* Flip cards */
+  .flip-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-block:14px; }
+  .flip-card{ perspective:1200px; min-height:118px; cursor:pointer; }
+  .flip-inner{ position:relative; width:100%; height:100%; min-height:118px; transition:transform .5s; transform-style:preserve-3d; }
+  .flip-card.flipped .flip-inner{ transform:rotateY(180deg); }
+  .flip-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:12px; border:1px solid var(--line); padding:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; }
+  .flip-front{ background:var(--paper-2); }
+  .flip-back{ background:var(--card-bg); border-color:var(--accent); transform:rotateY(180deg); }
+  .flip-label{ font-family:var(--font-mono); font-size:.68rem; letter-spacing:.07em; text-transform:uppercase; color:var(--accent); }
+  .flip-front .flip-q{ font-weight:600; }
+  .flip-back p{ margin:0; font-size:.88rem; max-width:none; }
+
+  /* Analogy table */
+  table.analogy{ width:100%; border-collapse:collapse; margin-block:14px; font-size:.94rem; }
+  table.analogy th, table.analogy td{ border:1px solid var(--line); padding:9px 12px; text-align:left; }
+  table.analogy th{ background:var(--paper-2); font-family:var(--font-mono); font-size:.76rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); }
+  table.analogy td.highlight{ color:var(--teal); font-weight:600; }
+  .table-wrap{ overflow-x:auto; }
+
+  /* Quiz */
+  .quiz-q{ margin-block:16px; }
+  .quiz-q p.question{ font-weight:600; margin-block-end:8px; max-width:none; }
+  .option{ display:block; width:100%; text-align:left; font:inherit; font-size:.95rem; padding:10px 14px; border:1px solid var(--line); border-radius:10px; background:var(--paper-2); color:var(--ink); cursor:pointer; margin-block-end:8px; }
+  .option:hover:not(:disabled){ border-color:var(--ink-soft); }
+  .option.correct{ border-color:var(--good); background:var(--good-bg); }
+  .option.wrong{ border-color:var(--bad); background:var(--bad-bg); }
+  .option:disabled{ cursor:default; }
+  .explain{ font-size:.88rem; color:var(--ink-soft); margin-block-start:6px; display:none; }
+  .explain.show{ display:block; }
+  .score-box{ font-family:var(--font-mono); font-size:.86rem; color:var(--ink-soft); border-top:1px solid var(--line); margin-block-start:16px; padding-block-start:12px; }
+  .score-box strong{ color:var(--accent); }
+
+  /* Definition cards */
+  .def-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-block:16px; }
+  .def-card{ border:1px solid var(--line); border-radius:12px; padding:16px; background:var(--paper-2); }
+  .def-sym{ font-family:var(--font-display); font-style:italic; font-size:2.1rem; color:var(--teal); line-height:1; }
+  .def-name{ font-weight:600; margin-block:4px 8px; }
+  .def-meta{ font-family:var(--font-mono); font-size:.8rem; color:var(--ink-soft); display:flex; flex-direction:column; gap:2px; }
+  .def-meta b{ color:var(--ink); }
+
+  .ms-row{ display:flex; gap:16px; flex-wrap:wrap; margin-block:14px; }
+  .messstation{ flex:1 1 260px; min-width:0; border:1px solid var(--line); border-radius:12px; padding:16px; background:var(--paper-2); text-align:center; }
+  .ms-head{ display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; margin-block-end:10px; }
+  .ms-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .gauge-svg{ width:180px; height:112px; max-width:100%; }
+  .ms-context{ margin-block:6px 10px; }
+  .ms-controls{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center; margin-block-start:6px; }
+  .ms-controls label{ font-family:var(--font-mono); font-size:.86rem; display:flex; align-items:center; gap:6px; }
+  .ms-controls input[type="number"]{ width:4.5em; font:inherit; font-family:var(--font-mono); padding:5px 7px; border:1px solid var(--line); border-radius:7px; background:var(--card-bg); color:var(--ink); }
+  .messstation .feedback{ margin-block-start:10px; }
+
+  .hinweis{ border:1px solid var(--accent); background:var(--accent-contrast); color:var(--ink); border-radius:12px; padding:14px 16px; margin-block:16px; }
+  .hinweis p{ margin:0; max-width:none; font-size:.92rem; }
+  .hinweis .flip-label{ display:block; margin-block-end:6px; }
+
+  /* Matching exercise */
+  .match-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:10px 24px; margin-block:16px; }
+  .match-col{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .match-item{ font:inherit; font-size:.92rem; text-align:left; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--paper-2); color:var(--ink); cursor:pointer; }
+  .match-item.selected{ border-color:var(--teal); background:var(--teal-contrast); }
+  .match-item.matched{ border-color:var(--good); background:var(--good-bg); cursor:default; }
+  .match-item.shake{ animation:shake .35s; border-color:var(--bad); }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-4px); } 75%{ transform:translateX(4px); } }
+  .match-status{ font-family:var(--font-mono); font-size:.82rem; color:var(--ink-soft); margin-block-start:10px; }
+
+  .task{ border-left:3px solid var(--line); padding-inline-start:14px; margin-block:16px; }
+  .task-label{ font-family:var(--font-mono); font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-soft); margin-block-end:6px; }
+  select.gap{ font:inherit; font-family:var(--font-mono); padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:var(--card-bg); color:var(--ink); }
+  button.check{ font:inherit; font-weight:600; background:var(--teal); color:var(--teal-contrast); border:none; border-radius:9px; padding:9px 16px; cursor:pointer; margin-block-start:10px; }
+  button.check:hover{ filter:brightness(1.05); }
+  .feedback{ font-size:.88rem; margin-block-start:8px; display:none; }
+  .feedback.show{ display:block; }
+  .feedback.ok{ color:var(--good); }
+  .feedback.no{ color:var(--bad); }
+
+  button.reveal{ font:inherit; font-size:.86rem; background:none; border:1px dashed var(--line); color:var(--ink-soft); border-radius:9px; padding:7px 13px; cursor:pointer; }
+  button.reveal:hover{ color:var(--ink); border-color:var(--ink-soft); }
+  .model-answer{ display:none; margin-block-start:10px; padding:12px 14px; background:var(--paper-2); border-radius:10px; font-size:.9rem; }
+  .model-answer.show{ display:block; }
+  textarea.free{ width:100%; min-height:70px; font:inherit; font-family:var(--font-body); padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--card-bg); color:var(--ink); resize:vertical; }
+
+  .merk-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-block:16px; }
+  .merk-card{ border:1px solid var(--teal); border-radius:12px; padding:16px; background:var(--teal-contrast); }
+  .merk-card p{ margin:0; max-width:none; font-size:.94rem; }
+  .merk-card .flip-label{ color:var(--teal); }
+
+  footer{ margin-block-start:34px; padding-block-start:18px; border-top:1px solid var(--line); }
+  footer p{ max-width:none; }
+
+  @media (max-width:480px){
+    .match-wrap{ grid-template-columns:1fr; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="hero">
+    <div class="eyebrow">Physik · Klasse 9 · Elektrizitätslehre</div>
+    <h1>Spannung und Stromstärke</h1>
+    <p class="lede">Wiederholung: Stromkreis, Schaltplan und die Wasserkreislauf-Analogie. Danach zwei neue Größen, mit denen wir ab jetzt genauer beschreiben können, was im Stromkreis passiert.</p>
+    <div class="meta-row">
+      <span class="pill">45 Minuten</span>
+      <span class="pill">5 Stationen</span>
+      <span class="pill">Reihen-/Parallelschaltung &amp; Ohm'sches Gesetz folgen später</span>
+    </div>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <a href="#einstieg" data-id="einstieg">Einstieg · 5'</a>
+    <a href="#wiederholung" data-id="wiederholung">Wiederholung · 15'</a>
+    <a href="#neu" data-id="neu">Neu · 15'</a>
+    <a href="#uebung" data-id="uebung">Übung · 7'</a>
+    <a href="#sicherung" data-id="sicherung">Sicherung · 3'</a>
+  </nav>
+
+  <!-- EINSTIEG -->
+  <section class="block" id="einstieg">
+    <div class="block-head">
+      <span class="tag">Einstieg</span>
+      <button class="time-btn" data-seconds="300">⏱ 5:00 starten</button>
+    </div>
+    <h2>Was weißt du noch?</h2>
+    <p>Klicke die drei Karten an, bevor du weiterliest. Versuche zuerst, dich selbst zu erinnern.</p>
+    <div class="flip-grid" id="recall-cards">
+      <div class="flip-card"><div class="flip-inner">
+        <div class="flip-face flip-front"><span class="flip-q">Was gehört in jeden Stromkreis?</span></div>
+        <div class="flip-face flip-back"><span class="flip-label">Antwort</span><p>Energiequelle, Verbraucher und Leiter, die alles verbinden.</p></div>
+      </div></div>
+      <div class="flip-card"><div class="flip-inner">
+        <div class="flip-face flip-front"><span class="flip-q">Was passiert bei einem offenen Stromkreis?</span></div>
+        <div class="flip-face flip-back"><span class="flip-label">Antwort</span><p>Der Kreis ist unterbrochen – es fließt kein Strom, der Verbraucher funktioniert nicht.</p></div>
+      </div></div>
+      <div class="flip-card"><div class="flip-inner">
+        <div class="flip-face flip-front"><span class="flip-q">Welcher Vergleich hilft, sich Strom vorzustellen?</span></div>
+        <div class="flip-face flip-back"><span class="flip-label">Antwort</span><p>Der Wasserkreislauf: Pumpe, Rohr und Wasserrad entsprechen Batterie, Kabel und Lämpchen.</p></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- WIEDERHOLUNG -->
+  <section class="block" id="wiederholung">
+    <div class="block-head">
+      <span class="tag">Wiederholung</span>
+      <button class="time-btn" data-seconds="900">⏱ 15:00 starten</button>
+    </div>
+    <h2>Stromkreis, Schaltplan, Wasserkreislauf</h2>
+
+    <h3>Der Wasserkreislauf im Vergleich zum Stromkreis</h3>
+    <div class="table-wrap">
+      <table class="analogy">
+        <tr><th>Wasserkreislauf</th><th>Stromkreis</th></tr>
+        <tr><td>Pumpe</td><td>Batterie</td></tr>
+        <tr><td>Rohr</td><td>Kabel</td></tr>
+        <tr><td>Wasserrad</td><td>Lämpchen</td></tr>
+        <tr><td>fließendes Wasser</td><td>elektrische Ladungen</td></tr>
+      </table>
+    </div>
+
+    <div class="scale-rule"></div>
+
+    <h3>Kurztest: 5 Fragen</h3>
+    <p class="small">Klicke eine Antwort an. Falsche Antworten kannst du noch einmal versuchen.</p>
+    <div id="quiz-wdh"></div>
+    <div class="score-box">Ergebnis: <strong><span id="score-wdh">0</span> / 5</strong> beim ersten Versuch richtig</div>
+  </section>
+
+  <!-- NEU -->
+  <section class="block highlight" id="neu">
+    <div class="block-head">
+      <span class="tag tag-new">Neu</span>
+      <button class="time-btn" data-seconds="900">⏱ 15:00 starten</button>
+    </div>
+    <h2>Spannung und Stromstärke</h2>
+
+    <p>Du weißt bereits: Elektrischer Strom ist die Bewegung von Ladungen durch einen Leiter, angetrieben von einer Spannungsquelle. Jetzt lernst du zwei physikalische Größen kennen, mit denen man diesen Vorgang genauer beschreiben und messen kann.</p>
+
+    <div class="def-grid">
+      <div class="def-card">
+        <div class="def-sym">U</div>
+        <div class="def-name">Elektrische Spannung</div>
+        <p>Gibt an, wie stark die Ladungen angetrieben werden.</p>
+        <div class="def-meta"><span>Einheit: <b>Volt (V)</b></span><span>Messgerät: <b>Voltmeter</b></span></div>
+      </div>
+      <div class="def-card">
+        <div class="def-sym">I</div>
+        <div class="def-name">Elektrische Stromstärke</div>
+        <p>Gibt an, wie viel Ladung pro Sekunde durch den Leiter fließt.</p>
+        <div class="def-meta"><span>Einheit: <b>Ampere (A)</b></span><span>Messgerät: <b>Amperemeter</b></span></div>
+      </div>
+    </div>
+
+    <h3>Messstationen: Lies die Werte ab</h3>
+    <p class="small">Jede Station zeigt eine Messung mit Zeiger-Skala. Lies den Wert ab, trage ihn ein und klicke „Prüfen". Mit „Neue Ablesung" kommt eine andere Zeigerstellung.</p>
+    <div class="ms-row">
+      <div class="messstation">
+        <div class="ms-head"><span class="ms-dot" style="background:var(--accent)"></span>Station 1 · Voltmeter</div>
+        <svg class="gauge-svg" id="gauge-volt"></svg>
+        <p class="ms-context small">Batteriehalter mit 1, 2 oder 3 Mignon-Zellen (je 1,5 V) in Reihe.</p>
+        <div class="ms-controls">
+          <label>Wert: <input type="number" step="0.1" id="volt-input" inputmode="decimal"> V</label>
+          <button class="check" id="volt-check">Prüfen</button>
+          <button class="reveal" id="volt-next">Neue Ablesung</button>
+        </div>
+        <div class="feedback" id="volt-feedback"></div>
+      </div>
+      <div class="messstation">
+        <div class="ms-head"><span class="ms-dot" style="background:var(--teal)"></span>Station 2 · Amperemeter</div>
+        <svg class="gauge-svg" id="gauge-amp"></svg>
+        <p class="ms-context small">Einfacher Stromkreis mit Lämpchen, Skala bis 2 A.</p>
+        <div class="ms-controls">
+          <label>Wert: <input type="number" step="0.1" id="amp-input" inputmode="decimal"> A</label>
+          <button class="check" id="amp-check">Prüfen</button>
+          <button class="reveal" id="amp-next">Neue Ablesung</button>
+        </div>
+        <div class="feedback" id="amp-feedback"></div>
+      </div>
+    </div>
+    <p class="small"><em>Hinweis:</em> Die Skalen sind eine vereinfachte Übungsdarstellung, keine Abbildung eines bestimmten Messgeräts.</p>
+
+    <h3>Die Analogie geht weiter</h3>
+    <div class="table-wrap">
+      <table class="analogy">
+        <tr><th>Wasserkreislauf</th><th>Stromkreis</th></tr>
+        <tr><td>Pumpleistung</td><td class="highlight">Spannung U (Volt, V)</td></tr>
+        <tr><td>Wassermenge pro Sekunde (Durchfluss)</td><td class="highlight">Stromstärke I (Ampere, A)</td></tr>
+      </table>
+    </div>
+    <p>Eine leistungsstärkere Pumpe treibt das Wasser stärker an – so wie eine höhere Spannung die Ladungen stärker antreibt. Und so wie man misst, wie viel Wasser pro Sekunde durch ein Rohr fließt, misst die Stromstärke, wie viel Ladung pro Sekunde durch den Leiter fließt.</p>
+
+    <div class="hinweis">
+      <span class="flip-label">Hinweis</span>
+      <p>Wie ein Voltmeter und ein Amperemeter richtig in den Stromkreis eingebaut werden (in Reihe oder parallel), und wie Spannung, Stromstärke und Widerstand genau zusammenhängen (Ohm'sches Gesetz), lernst du in späteren Stunden. Für heute reicht: beide Größen, ihre Einheiten und ihre Messgeräte kennen.</p>
+    </div>
+
+    <h3>Kurzcheck</h3>
+    <div id="quiz-neu"></div>
+    <div class="score-box">Ergebnis: <strong><span id="score-neu">0</span> / 2</strong> beim ersten Versuch richtig</div>
+  </section>
+
+  <!-- ÜBUNG -->
+  <section class="block" id="uebung">
+    <div class="block-head">
+      <span class="tag">Übung</span>
+      <button class="time-btn" data-seconds="420">⏱ 7:00 starten</button>
+    </div>
+    <h2>Übung</h2>
+
+    <h3>Zuordnen</h3>
+    <p class="small">Klicke links einen Begriff an, dann rechts die passende Antwort. Finde alle 4 Paare.</p>
+    <div class="match-wrap">
+      <div class="match-col" id="match-left"></div>
+      <div class="match-col" id="match-right"></div>
+    </div>
+    <div class="match-status" id="match-status">0 von 4 Paaren gefunden</div>
+
+    <div class="task">
+      <div class="task-label">Grundniveau</div>
+      <p>Ergänze die Sätze mit den passenden Begriffen.</p>
+      <p>Die elektrische <select class="gap" id="gap1">
+          <option value="">– wählen –</option>
+          <option>Spannung</option>
+          <option>Stromstärke</option>
+        </select> wird in Volt gemessen.
+        Die elektrische <select class="gap" id="gap2">
+          <option value="">– wählen –</option>
+          <option>Spannung</option>
+          <option>Stromstärke</option>
+        </select> wird in Ampere gemessen.</p>
+      <button class="check" id="check-gap">Prüfen</button>
+      <div class="feedback" id="feedback-gap"></div>
+    </div>
+
+    <div class="task">
+      <div class="task-label">Erweitertes Niveau</div>
+      <p>Ein Gerät wird an eine höhere Spannung angeschlossen als vorgesehen. Was vermutest du, passiert mit der Stromstärke? Begründe mit der Wasserkreislauf-Analogie.</p>
+      <textarea class="free" placeholder="Deine Vermutung …"></textarea>
+      <button class="reveal" data-target="model-1">Musterantwort anzeigen</button>
+      <div class="model-answer" id="model-1">Vermutlich steigt die Stromstärke, weil die Ladungen stärker angetrieben werden – so wie eine leistungsstärkere Pumpe mehr Wasser durch das Rohr drückt. Den genauen Zusammenhang untersuchen wir in einer späteren Stunde mit dem Ohm'schen Gesetz.</div>
+    </div>
+  </section>
+
+  <!-- SICHERUNG -->
+  <section class="block" id="sicherung">
+    <div class="block-head">
+      <span class="tag">Sicherung</span>
+      <button class="time-btn" data-seconds="180">⏱ 3:00 starten</button>
+    </div>
+    <h2>Für dein Heft</h2>
+    <p>Übertrage die beiden Merksätze in dein Heft.</p>
+    <div class="merk-grid">
+      <div class="merk-card">
+        <span class="flip-label">Merke</span>
+        <p><strong>Spannung (U)</strong> treibt die elektrischen Ladungen an. Einheit: <strong>Volt (V)</strong>. Gemessen mit dem <strong>Voltmeter</strong>.</p>
+      </div>
+      <div class="merk-card">
+        <span class="flip-label">Merke</span>
+        <p><strong>Stromstärke (I)</strong> gibt an, wie viel Ladung pro Sekunde fließt. Einheit: <strong>Ampere (A)</strong>. Gemessen mit dem <strong>Amperemeter</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p class="small">Bezug: Physik Fachcurricula 2024, Elektrizitätslehre (R8/H9) – Inhalte „Elektrische Spannung" und „Elektrische Stromstärke". Reihen-/Parallelschaltung von Messgeräten und das Ohm'sche Gesetz sind laut Curriculum eigene, spätere Inhalte und werden hier bewusst nicht vorweggenommen.</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- Scrollspy für die Sprungleiste ----
+  var sections = ['einstieg','wiederholung','neu','uebung','sicherung'].map(function(id){ return document.getElementById(id); });
+  var links = Array.prototype.slice.call(document.querySelectorAll('#stepper a'));
+  function setActive(id){
+    links.forEach(function(a){ a.classList.toggle('active', a.dataset.id === id); });
+  }
+  if ('IntersectionObserver' in window){
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) setActive(e.target.id);
+      });
+    }, { rootMargin: '-40% 0px -50% 0px' });
+    sections.forEach(function(s){ if (s) obs.observe(s); });
+  }
+  setActive('einstieg');
+
+  // ---- Timer-Buttons ----
+  document.querySelectorAll('.time-btn').forEach(function(btn){
+    var total = parseInt(btn.dataset.seconds, 10);
+    var remaining = total;
+    var timerId = null;
+    function fmt(s){
+      var m = Math.floor(s/60), r = s%60;
+      return m + ':' + (r < 10 ? '0' : '') + r;
+    }
+    function render(){
+      btn.textContent = '⏱ ' + fmt(remaining) + (timerId ? '' : (remaining === 0 ? ' fertig' : ' starten'));
+    }
+    render();
+    btn.addEventListener('click', function(){
+      if (timerId){
+        clearInterval(timerId);
+        timerId = null;
+        remaining = total;
+        btn.classList.remove('running','done');
+        render();
+        return;
+      }
+      btn.classList.add('running');
+      timerId = setInterval(function(){
+        remaining -= 1;
+        if (remaining <= 0){
+          remaining = 0;
+          clearInterval(timerId);
+          timerId = null;
+          btn.classList.remove('running');
+          btn.classList.add('done');
+        }
+        render();
+      }, 1000);
+    });
+  });
+
+  // ---- Flip cards ----
+  document.querySelectorAll('.flip-card').forEach(function(card){
+    card.addEventListener('click', function(){ card.classList.toggle('flipped'); });
+  });
+
+  // ---- Quiz-Hilfsfunktion ----
+  function buildQuiz(containerId, scoreId, questions){
+    var container = document.getElementById(containerId);
+    var scoreEl = document.getElementById(scoreId);
+    var score = 0;
+    questions.forEach(function(q, qi){
+      var wrap = document.createElement('div');
+      wrap.className = 'quiz-q';
+      var p = document.createElement('p');
+      p.className = 'question';
+      p.textContent = (qi+1) + '. ' + q.q;
+      wrap.appendChild(p);
+      var answered = false;
+      var firstTry = true;
+      var explain = document.createElement('div');
+      explain.className = 'explain';
+      explain.textContent = q.explain || '';
+      q.options.forEach(function(optText, oi){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'option';
+        b.textContent = optText;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          if (oi === q.correct){
+            b.classList.add('correct');
+            answered = true;
+            if (firstTry){ score += 1; scoreEl.textContent = score; }
+            explain.classList.add('show');
+            wrap.querySelectorAll('.option').forEach(function(o){ o.disabled = true; });
+          } else {
+            b.classList.add('wrong');
+            b.disabled = true;
+            firstTry = false;
+          }
+        });
+        wrap.appendChild(b);
+      });
+      wrap.appendChild(explain);
+      container.appendChild(wrap);
+    });
+  }
+
+  buildQuiz('quiz-wdh', 'score-wdh', [
+    { q: 'Welches Bauteil liefert dem Stromkreis die Energie?', options: ['Der Leiter','Der Verbraucher','Die Energiequelle (z. B. Batterie)'], correct: 2, explain: 'Die Energiequelle treibt den Strom an, der Verbraucher nutzt ihn.' },
+    { q: 'Ein Schaltplan …', options: ['zeigt Bauteile mit genormten Symbolen statt echten Zeichnungen.', 'funktioniert nur für offene Stromkreise.', 'ersetzt das Experiment vollständig.'], correct: 0, explain: 'Genormte Symbole werden überall gleich verstanden.' },
+    { q: 'Was entspricht in der Wasserkreislauf-Analogie der Batterie?', options: ['Das Wasserrad', 'Die Pumpe', 'Das Rohr'], correct: 1, explain: 'Die Pumpe treibt das Wasser an, die Batterie treibt die Ladungen an.' },
+    { q: 'Stimmt die Aussage „Der Strom wird im Lämpchen verbraucht"?', options: ['Ja, die Ladungen werden verbraucht.', 'Nein, verbraucht wird nur die Energie, die die Ladungen mit sich tragen.', 'Ja, aber nur bei LEDs.'], correct: 1, explain: 'Die Ladungen fließen zurück zur Batterie – wie das Wasser zurück zur Pumpe.' },
+    { q: 'Wann fließt in einem Stromkreis kein Strom?', options: ['Wenn er geschlossen ist.', 'Wenn er unterbrochen (offen) ist.', 'Das ist nie der Fall.'], correct: 1, explain: 'Ein Stromkreis muss lückenlos geschlossen sein, damit Strom fließen kann.' }
+  ]);
+
+  buildQuiz('quiz-neu', 'score-neu', [
+    { q: 'Welche Einheit hat die Stromstärke?', options: ['Volt (V)', 'Ampere (A)', 'Ohm (Ω)'], correct: 1, explain: 'Spannung wird in Volt gemessen, Stromstärke in Ampere.' },
+    { q: 'Was entspricht in der Analogie der Spannung?', options: ['Die Pumpleistung', 'Die Rohrlänge', 'Die Wasserrad-Farbe'], correct: 0, explain: 'Eine stärkere Pumpe treibt das Wasser stärker an, so wie eine höhere Spannung die Ladungen stärker antreibt.' }
+  ]);
+
+  // ---- Messstationen: Zeiger-Skala zeichnen ----
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function gaugePolar(cx, cy, r, deg){
+    var rad = deg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
+  }
+  function drawGauge(svg, opts){
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.setAttribute('viewBox', '0 0 160 100');
+    var cx = 80, cy = 88, R = 68, Rin = 58, Rlabel = 46;
+    var range = opts.max - opts.min;
+
+    var p0 = gaugePolar(cx, cy, R, 180), p1 = gaugePolar(cx, cy, R, 0);
+    var arc = document.createElementNS(SVG_NS, 'path');
+    arc.setAttribute('d', 'M' + p0.x + ',' + p0.y + ' A' + R + ',' + R + ' 0 0 1 ' + p1.x + ',' + p1.y);
+    arc.setAttribute('fill', 'none');
+    arc.setAttribute('stroke', 'var(--line)');
+    arc.setAttribute('stroke-width', '5');
+    svg.appendChild(arc);
+
+    for (var v = opts.min; v <= opts.max + 1e-9; v += opts.majorStep){
+      var f = (v - opts.min) / range;
+      var deg = 180 - f * 180;
+      var a = gaugePolar(cx, cy, R, deg), b = gaugePolar(cx, cy, Rin, deg), c = gaugePolar(cx, cy, Rlabel, deg);
+      var tick = document.createElementNS(SVG_NS, 'line');
+      tick.setAttribute('x1', a.x); tick.setAttribute('y1', a.y);
+      tick.setAttribute('x2', b.x); tick.setAttribute('y2', b.y);
+      tick.setAttribute('stroke', 'var(--ink-soft)'); tick.setAttribute('stroke-width', '2');
+      svg.appendChild(tick);
+      var label = document.createElementNS(SVG_NS, 'text');
+      label.setAttribute('x', c.x); label.setAttribute('y', c.y + 3);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('font-family', 'IBM Plex Mono'); label.setAttribute('font-size', '9');
+      label.setAttribute('fill', 'var(--ink-soft)');
+      label.textContent = (Math.round(v * 10) / 10).toString();
+      svg.appendChild(label);
+    }
+
+    var fv = (opts.value - opts.min) / range;
+    var degv = 180 - fv * 180;
+    var tip = gaugePolar(cx, cy, 40, degv);
+    var needle = document.createElementNS(SVG_NS, 'line');
+    needle.setAttribute('x1', cx); needle.setAttribute('y1', cy);
+    needle.setAttribute('x2', tip.x); needle.setAttribute('y2', tip.y);
+    needle.setAttribute('stroke', opts.color); needle.setAttribute('stroke-width', '3'); needle.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(needle);
+    var hub = document.createElementNS(SVG_NS, 'circle');
+    hub.setAttribute('cx', cx); hub.setAttribute('cy', cy); hub.setAttribute('r', '4'); hub.setAttribute('fill', opts.color);
+    svg.appendChild(hub);
+    var unitLabel = document.createElementNS(SVG_NS, 'text');
+    unitLabel.setAttribute('x', cx); unitLabel.setAttribute('y', cy + 20);
+    unitLabel.setAttribute('text-anchor', 'middle');
+    unitLabel.setAttribute('font-family', 'IBM Plex Mono'); unitLabel.setAttribute('font-size', '11'); unitLabel.setAttribute('font-weight', '600');
+    unitLabel.setAttribute('fill', opts.color);
+    unitLabel.textContent = opts.unit;
+    svg.appendChild(unitLabel);
+  }
+
+  function setupMessstation(cfg){
+    var svg = document.getElementById(cfg.svgId);
+    var input = document.getElementById(cfg.inputId);
+    var feedback = document.getElementById(cfg.feedbackId);
+    var idx = 0;
+    function render(){
+      drawGauge(svg, { min: cfg.min, max: cfg.max, majorStep: cfg.majorStep, unit: cfg.unit, color: cfg.color, value: cfg.values[idx] });
+      input.value = '';
+      feedback.className = 'feedback';
+      feedback.textContent = '';
+    }
+    render();
+    document.getElementById(cfg.nextId).addEventListener('click', function(){
+      idx = (idx + 1) % cfg.values.length;
+      render();
+    });
+    document.getElementById(cfg.checkId).addEventListener('click', function(){
+      var val = parseFloat(input.value.replace(',', '.'));
+      feedback.classList.add('show');
+      if (!isNaN(val) && Math.abs(val - cfg.values[idx]) < cfg.tolerance){
+        feedback.textContent = 'Richtig: ' + cfg.values[idx] + ' ' + cfg.unit;
+        feedback.className = 'feedback show ok';
+      } else {
+        feedback.textContent = 'Noch nicht richtig – lies noch einmal an der Skala ab.';
+        feedback.className = 'feedback show no';
+      }
+    });
+  }
+
+  setupMessstation({
+    svgId: 'gauge-volt', inputId: 'volt-input', checkId: 'volt-check', nextId: 'volt-next', feedbackId: 'volt-feedback',
+    min: 0, max: 6, majorStep: 1, unit: 'V', color: 'var(--accent)', tolerance: 0.15,
+    values: [1.5, 3.0, 4.5]
+  });
+  setupMessstation({
+    svgId: 'gauge-amp', inputId: 'amp-input', checkId: 'amp-check', nextId: 'amp-next', feedbackId: 'amp-feedback',
+    min: 0, max: 2, majorStep: 0.5, unit: 'A', color: 'var(--teal)', tolerance: 0.1,
+    values: [0.5, 1.0, 1.5]
+  });
+
+  // ---- Matching-Übung ----
+  var pairs = [
+    { left: 'Spannung', right: 'Volt (V)' },
+    { left: 'Stromstärke', right: 'Ampere (A)' },
+    { left: 'Pumpleistung', right: 'entspricht der Spannung' },
+    { left: 'Durchflussmenge', right: 'entspricht der Stromstärke' }
+  ];
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i+1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+  var leftCol = document.getElementById('match-left');
+  var rightCol = document.getElementById('match-right');
+  var statusEl = document.getElementById('match-status');
+  var rightShuffled = shuffle(pairs);
+  var selectedLeft = null;
+  var matchedCount = 0;
+
+  pairs.forEach(function(pair, idx){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'match-item';
+    b.textContent = pair.left;
+    b.dataset.pairIndex = idx;
+    b.addEventListener('click', function(){
+      if (b.classList.contains('matched')) return;
+      leftCol.querySelectorAll('.match-item').forEach(function(x){ x.classList.remove('selected'); });
+      b.classList.add('selected');
+      selectedLeft = b;
+    });
+    leftCol.appendChild(b);
+  });
+
+  rightShuffled.forEach(function(pair, idx){
+    var realIndex = pairs.indexOf(pair);
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'match-item';
+    b.textContent = pair.right;
+    b.dataset.pairIndex = realIndex;
+    b.addEventListener('click', function(){
+      if (b.classList.contains('matched') || !selectedLeft) return;
+      if (parseInt(selectedLeft.dataset.pairIndex, 10) === parseInt(b.dataset.pairIndex, 10)){
+        selectedLeft.classList.remove('selected');
+        selectedLeft.classList.add('matched');
+        b.classList.add('matched');
+        selectedLeft = null;
+        matchedCount += 1;
+        statusEl.textContent = matchedCount + ' von 4 Paaren gefunden';
+        if (matchedCount === 4){ statusEl.textContent = 'Alle 4 Paare gefunden!'; }
+      } else {
+        b.classList.add('shake');
+        setTimeout(function(){ b.classList.remove('shake'); }, 350);
+        if (selectedLeft){ selectedLeft.classList.remove('selected'); selectedLeft = null; }
+      }
+    });
+    rightCol.appendChild(b);
+  });
+
+  // ---- Lückentext prüfen ----
+  document.getElementById('check-gap').addEventListener('click', function(){
+    var g1 = document.getElementById('gap1').value;
+    var g2 = document.getElementById('gap2').value;
+    var fb = document.getElementById('feedback-gap');
+    fb.classList.add('show');
+    if (g1 === 'Spannung' && g2 === 'Stromstärke'){
+      fb.textContent = 'Richtig! Spannung in Volt, Stromstärke in Ampere.';
+      fb.className = 'feedback show ok';
+    } else if (!g1 || !g2){
+      fb.textContent = 'Bitte beide Lücken ausfüllen.';
+      fb.className = 'feedback show no';
+    } else {
+      fb.textContent = 'Noch nicht ganz richtig – versuch es noch einmal.';
+      fb.className = 'feedback show no';
+    }
+  });
+
+  // ---- Musterantwort einblenden ----
+  document.querySelectorAll('.reveal').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var target = document.getElementById(btn.dataset.target);
+      target.classList.toggle('show');
+      btn.textContent = target.classList.contains('show') ? 'Musterantwort ausblenden' : 'Musterantwort anzeigen';
+    });
+  });
+})();
+</script>
+
+</body></html>
